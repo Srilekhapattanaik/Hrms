@@ -1,47 +1,93 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import MainLayout from "../components/MainLayout";
-import { Users, UserCheck, CalendarDays, UserX } from "lucide-react";
+import { Users, Briefcase, UserPlus, FileCheck2 } from "lucide-react";
+import { getDashboardData } from "@/services/dashboardService";
+import { TableRowsSkeleton } from "../components/Skeleton";
+
+const STAGES = [
+  { key: "APPLIED", label: "Applied", dot: "bg-sky-400" },
+  { key: "SCREENING", label: "Screening", dot: "bg-yellow-400" },
+  { key: "INTERVIEW", label: "Interview", dot: "bg-orange-400" },
+  { key: "OFFER", label: "Offer", dot: "bg-green-400" },
+];
+
+const up = (value) => String(value || "").toUpperCase();
 
 export default function DashboardPage() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getDashboardData()
+      .then(setData)
+      .catch((err) => setError(err.message || "Could not load the dashboard"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // "..." while loading, "-" when that API could not be read
+  const show = (value) =>
+    loading ? "..." : value === null || value === undefined ? "-" : value;
+
+  const employees = data?.employees ?? null;
+  const jobs = data?.jobs ?? null;
+  const candidates = data?.candidates ?? null;
+  const documents = data?.documents ?? null;
+
+  const stageCount = (key) =>
+    candidates ? candidates.filter((c) => up(c.status) === key).length : null;
+
+  const pipelineTotal = candidates
+    ? candidates.filter((c) => STAGES.some((s) => s.key === up(c.status))).length
+    : 0;
+  const stagePercent = (key) =>
+    pipelineTotal ? Math.round(((stageCount(key) || 0) / pipelineTotal) * 100) : 0;
+
   const stats = [
     {
       label: "Total Employees",
-      value: 120,
+      value: show(employees ? employees.length : null),
       icon: Users,
       iconStyle: "bg-sky-500/15 text-sky-400",
     },
     {
-      label: "Present Today",
-      value: 105,
-      icon: UserCheck,
+      label: "Open Positions",
+      value: show(
+        jobs ? jobs.filter((j) => up(j.status || "OPEN") === "OPEN").length : null
+      ),
+      icon: Briefcase,
       iconStyle: "bg-green-500/15 text-green-400",
     },
     {
-      label: "On Leave",
-      value: 10,
-      icon: CalendarDays,
+      label: "Candidates in Pipeline",
+      value: show(
+        candidates
+          ? candidates.filter((c) => STAGES.some((s) => s.key === up(c.status)))
+              .length
+          : null
+      ),
+      icon: UserPlus,
       iconStyle: "bg-orange-500/15 text-orange-400",
     },
     {
-      label: "Absent Today",
-      value: 5,
-      icon: UserX,
+      label: "Documents Pending",
+      value: show(
+        documents
+          ? documents.filter((d) => up(d.status || "PENDING") === "PENDING")
+              .length
+          : null
+      ),
+      icon: FileCheck2,
       iconStyle: "bg-red-500/15 text-red-400",
     },
   ];
 
-  const employees = [
-    { name: "Rahul Kumar", email: "rahul@company.com", dept: "Engineering", date: "25 Sep 2026" },
-    { name: "Priya Singh", email: "priya@company.com", dept: "Human Resources", date: "22 Sep 2026" },
-    { name: "Amit Das", email: "amit@company.com", dept: "Finance", date: "20 Sep 2026" },
-  ];
-
-  const activity = [
-    { text: "Rahul Kumar checked in", time: "09:12 AM", dot: "bg-green-400" },
-    { text: "Priya Singh checked in", time: "09:05 AM", dot: "bg-sky-400" },
-    { text: "Amit Das submitted a leave request", time: "10:30 AM", dot: "bg-orange-400" },
-  ];
+  // newest 5 employees
+  const recentEmployees = employees
+    ? [...employees].sort((a, b) => b.id - a.id).slice(0, 5)
+    : [];
 
   return (
     <MainLayout>
@@ -54,6 +100,12 @@ export default function DashboardPage() {
           Here is a summary of your workforce activity.
         </p>
       </div>
+
+      {error && (
+        <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {error}
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -97,14 +149,14 @@ export default function DashboardPage() {
                 <tr>
                   <th className="px-5 py-3 font-medium">Employee</th>
                   <th className="px-5 py-3 font-medium">Department</th>
-                  <th className="px-5 py-3 font-medium">Joined</th>
                   <th className="px-5 py-3 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {employees.map((emp) => (
+                {loading && <TableRowsSkeleton rows={3} cols={3} />}
+                {recentEmployees.map((emp) => (
                   <tr
-                    key={emp.email}
+                    key={emp.id}
                     className="border-t border-white/10 hover:bg-white/5"
                   >
                     <td className="px-5 py-4">
@@ -122,38 +174,66 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-slate-300">{emp.dept}</td>
-                    <td className="px-5 py-4 text-slate-300">{emp.date}</td>
+                    <td className="px-5 py-4 text-slate-300">
+                      {emp.department}
+                    </td>
                     <td className="px-5 py-4">
-                      <span className="rounded-full bg-green-500/15 px-3 py-1 text-xs font-medium text-green-400">
-                        Active
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-medium ${
+                          emp.status === "ACTIVE"
+                            ? "bg-green-500/15 text-green-400"
+                            : "bg-slate-700/40 text-slate-300"
+                        }`}
+                      >
+                        {emp.status.charAt(0) + emp.status.slice(1).toLowerCase()}
                       </span>
                     </td>
                   </tr>
                 ))}
+
+                {!loading && recentEmployees.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="px-5 py-8 text-center text-sm text-slate-500"
+                    >
+                      {employees === null ? "Could not load employees." : "No employees yet."}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Today's activity */}
+        {/* Recruitment pipeline (real counts) */}
         <div className="rounded-2xl border border-white/10 bg-white/5">
           <div className="border-b border-white/10 px-5 py-4">
-            <h2 className="font-semibold text-slate-100">Today's Activity</h2>
+            <h2 className="font-semibold text-slate-100">Recruitment Pipeline</h2>
           </div>
 
           <ul>
-            {activity.map((item, index) => (
+            {STAGES.map((stage) => (
               <li
-                key={index}
+                key={stage.key}
                 className="flex items-start gap-3 border-t border-white/10 px-5 py-4 first:border-t-0"
               >
                 <span
-                  className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${item.dot}`}
+                  className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${stage.dot}`}
                 />
-                <div>
-                  <p className="text-sm text-slate-200">{item.text}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">{item.time}</p>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-slate-200">{stage.label}</p>
+                    <p className="text-sm font-semibold text-slate-100">
+                      {show(stageCount(stage.key))}
+                    </p>
+                  </div>
+                  <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
+                    <div
+                      className={`h-1.5 rounded-full transition-all duration-700 ${stage.dot}`}
+                      style={{ width: `${stagePercent(stage.key)}%` }}
+                    />
+                  </div>
                 </div>
               </li>
             ))}

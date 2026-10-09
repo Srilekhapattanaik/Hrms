@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -14,21 +14,66 @@ import {
   Settings,
   LogOut,
   Building2,
+  UserPlus,
+  Briefcase,
+  FileCheck2,
 } from "lucide-react";
 import { logoutUser } from "../../services/authService";
+import { getPendingCount } from "../../services/documentService";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
+  const [role, setRole] = useState("");
+  const [pendingDocs, setPendingDocs] = useState(0);
   const pathname = usePathname();
+
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      setRole(user.role || "");
+    } catch {
+      setRole("");
+    }
+  }, []);
+
+  // red number on "Documents" = how many documents wait for review.
+  // The Documents page fires "documents-changed" after every action.
+  useEffect(() => {
+    if (!["SUPER_ADMIN", "HR_ADMIN"].includes(role)) return;
+    const load = () =>
+      getPendingCount()
+        .then(setPendingDocs)
+        .catch(() => {});
+    load();
+    window.addEventListener("documents-changed", load);
+    return () => window.removeEventListener("documents-changed", load);
+  }, [role]);
 
   const menuItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Employees", href: "/employees", icon: Users },
     { name: "Attendance", href: "/attendance", icon: CalendarCheck },
     { name: "Leave Management", href: "/leave", icon: UserCheck },
+    { name: "Recruitment", href: "/recruitment", icon: Briefcase },
+    { name: "Documents", href: "/documents", icon: FileCheck2 },
     { name: "Reports", href: "/reports", icon: FileText },
+    { name: "Organization", href: "/organization", icon: Building2 },
+    { name: "Add User", href: "/users/new", icon: UserPlus },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
+
+  // Pages listed here are visible only to these roles.
+  // Pages not listed are visible to everyone.
+  const roleAccess = {
+    "/organization": ["SUPER_ADMIN"],
+    "/users/new": ["SUPER_ADMIN"],
+    "/recruitment": ["SUPER_ADMIN", "HR_ADMIN"],
+    "/documents": ["SUPER_ADMIN", "HR_ADMIN"],
+  };
+
+  const visibleItems = menuItems.filter(
+    (item) => !roleAccess[item.href] || roleAccess[item.href].includes(role)
+  );
 
   const handleLogout = async () => {
     try {
@@ -85,7 +130,7 @@ export default function Sidebar() {
           )}
 
           <nav className="space-y-1">
-            {menuItems.map((item) => {
+            {visibleItems.map((item) => {
               const Icon = item.icon;
 
               const isActive =
@@ -93,12 +138,14 @@ export default function Sidebar() {
                 (item.href !== "/dashboard" &&
                   pathname.startsWith(`${item.href}/`));
 
+              const showBadge = item.href === "/documents" && pendingDocs > 0;
+
               return (
                 <Link
                   key={item.name}
                   href={item.href}
                   title={!isOpen ? item.name : undefined}
-                  className={`flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition
+                  className={`relative flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition
                     ${
                       isActive
                         ? "bg-sky-500/15 text-sky-400"
@@ -109,6 +156,16 @@ export default function Sidebar() {
                 >
                   <Icon size={18} className="shrink-0" />
                   {isOpen && <span>{item.name}</span>}
+
+                  {/* pending documents badge */}
+                  {showBadge && isOpen && (
+                    <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+                      {pendingDocs > 99 ? "99+" : pendingDocs}
+                    </span>
+                  )}
+                  {showBadge && !isOpen && (
+                    <span className="absolute right-3 top-2 h-2.5 w-2.5 rounded-full bg-red-500" />
+                  )}
                 </Link>
               );
             })}

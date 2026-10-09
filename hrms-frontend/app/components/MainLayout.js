@@ -7,7 +7,7 @@ import { poppins } from "./fonts";
 export default function MainLayout({ children }) {
   return (
     <div
-      className={`${poppins.className} relative min-h-screen overflow-x-hidden bg-[#0b1020] text-slate-200`}
+      className={`${poppins.className} themed relative min-h-screen overflow-x-hidden bg-[#0b1020] text-slate-200`}
     >
       <style>{`
         @keyframes pageFade {
