@@ -1,103 +1,71 @@
 package com.hrms.backend.controller;
 
-import com.hrms.backend.dto.OrganizationDTO;
 import com.hrms.backend.entity.Organization;
-import com.hrms.backend.service.OrganizationService;
-import org.springframework.http.MediaType;
+import com.hrms.backend.entity.User;
+import com.hrms.backend.repository.OrganizationRepository;
+import com.hrms.backend.repository.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/organizations")
+@RequestMapping("/api/v1/organizations")
 public class OrganizationController {
 
-    private final OrganizationService organizationService;
+    private final OrganizationRepository organizationRepository;
+    private final UserRepository userRepository;
 
-    public OrganizationController(OrganizationService organizationService) {
-        this.organizationService = organizationService;
+    public OrganizationController(OrganizationRepository organizationRepository, UserRepository userRepository) {
+        this.organizationRepository = organizationRepository;
+        this.userRepository = userRepository;
     }
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, String>> createOrganization(
-            @RequestParam("name") String name,
-            @RequestParam("address") String address,
-            @RequestParam("contactEmail") String contactEmail,
-            @RequestParam(value = "logo", required = false) MultipartFile logoFile) {
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> createOrganization(@RequestBody Organization organization) {
+        Optional<User> adminUserOpt = userRepository.findByEmail(organization.getContactEmail());
         
-        try {
-            Organization org = new Organization();
-            org.setName(name);
-            org.setAddress(address);
-            org.setContactEmail(contactEmail);
-
-            if (logoFile != null && !logoFile.isEmpty()) {
-                String uploadDir = "uploads/logos/";
-                Path uploadPath = Paths.get(uploadDir);
-                
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
-                }
-
-                String fileName = UUID.randomUUID().toString() + "_" + logoFile.getOriginalFilename();
-                Path filePath = uploadPath.resolve(fileName);
-                Files.copy(logoFile.getInputStream(), filePath);
-                
-                org.setLogoPath(uploadDir + fileName);
-            }
-
-            organizationService.saveOrganization(org);
-            
-            // RETURN TINTU'S EXACT REQUESTED JSON
-            return ResponseEntity.ok(Collections.singletonMap("message", "Organization saved successfully"));
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(
-                    Collections.singletonMap("message", "Failed to create organization: " + e.getMessage())
-            );
+        if (adminUserOpt.isEmpty() || adminUserOpt.get().getRole() == null || !"SUPER_ADMIN".equals(adminUserOpt.get().getRole().getName())) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Validation Failed: A valid SUPER_ADMIN user must exist with the provided contact email before creating the organization.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
+
+        Organization savedOrg = organizationRepository.save(organization);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Organization created successfully");
+        response.put("id", savedOrg.getId());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Organization> getOrganizationById(@PathVariable Long id) {
+        return organizationRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping
-    public ResponseEntity<List<OrganizationDTO>> getAllOrganizations() {
-        List<Organization> organizations = organizationService.getAllOrganizations();
-        
-        List<OrganizationDTO> safeData = organizations.stream()
-                .map(org -> new OrganizationDTO(
-                        org.getId(),
-                        org.getName(),
-                        org.getAddress(),
-                        org.getContactEmail()
-                ))
-                .toList();
-
-        return ResponseEntity.ok(safeData);
+    public ResponseEntity<List<Organization>> getAllOrganizations() {
+        return ResponseEntity.ok(organizationRepository.findAll());
     }
-    
+
     @PutMapping("/{id}")
-    public ResponseEntity<OrganizationDTO> updateOrganization(@PathVariable Long id, @RequestBody Organization orgDetails) {
-        Organization updatedOrg = organizationService.updateOrganization(id, orgDetails);
-        
-        OrganizationDTO safeData = new OrganizationDTO(
-                updatedOrg.getId(),
-                updatedOrg.getName(),
-                updatedOrg.getAddress(),
-                updatedOrg.getContactEmail()
-        );
-        return ResponseEntity.ok(safeData);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteOrganization(@PathVariable Long id) {
-        organizationService.deleteOrganization(id);
-        return ResponseEntity.ok("Organization deleted successfully.");
+    public ResponseEntity<Organization> updateOrganization(@PathVariable Long id, @RequestBody Organization orgDetails) {
+        return organizationRepository.findById(id)
+                .map(existingOrg -> {
+                    existingOrg.setName(orgDetails.getName());
+                    existingOrg.setLogoUrl(orgDetails.getLogoUrl());
+                    existingOrg.setAddress(orgDetails.getAddress());
+                    existingOrg.setContactEmail(orgDetails.getContactEmail());
+                    return ResponseEntity.ok(organizationRepository.save(existingOrg));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }
