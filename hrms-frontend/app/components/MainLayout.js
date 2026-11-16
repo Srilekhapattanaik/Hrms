@@ -1,13 +1,27 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { poppins } from "./fonts";
 
 export default function MainLayout({ children }) {
+  const router = useRouter();
+  const [allowed, setAllowed] = useState(false);
+
+  // No token = not logged in -> go to login (protects every page inside MainLayout,
+  // including Tintu's pages; replaces Tintu's old Vite ProtectedRoute)
+  useEffect(() => {
+    if (!localStorage.getItem("token")) router.replace("/login");
+    else setAllowed(true);
+  }, [router]);
+
+  if (!allowed) return null;
+
   return (
     <div
-      className={`${poppins.className} relative min-h-screen overflow-x-hidden bg-[#0b1020] text-slate-200`}
+      className={`${poppins.className} themed relative min-h-screen overflow-x-hidden bg-[#0b1020] text-slate-200`}
     >
       <style>{`
         @keyframes pageFade {
