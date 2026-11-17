@@ -51,19 +51,17 @@ export default function OrganizationPage() {
     try {
       setLoading(true);
 
-      const payload = {
+           const payload = {
         name: formData.companyName,
         contactEmail: formData.contactEmail,
         logoUrl: formData.logoUrl,
-        address: [
-          formData.street,
-          formData.city,
-          formData.state,
-          formData.country,
-          formData.pincode,
-        ]
-          .filter(Boolean)
-          .join(", "),
+        address: {
+          street: formData.street.trim(),
+          city: formData.city.trim(),
+          state: formData.state.trim(),
+          country: formData.country.trim(),
+          pincode: formData.pincode.trim(),
+        },
       };
 
       const response = await createOrganization(payload);

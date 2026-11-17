@@ -65,7 +65,7 @@ export const createCandidate = ({ fullName, email, phone, jobOpeningId, resume }
   form.append("email", email);
   form.append("phone", phone);
   form.append("jobOpeningId", String(jobOpeningId));
-  form.append("resume", resume);
+  form.append("file", resume);
   return request(ENDPOINTS.candidates, { method: "POST", body: form });
 };
 

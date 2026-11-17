@@ -13,8 +13,10 @@ import { callApi } from "../../../../services/tintu/utils/callApi.js";
 import { getErrorMessage } from "../../../../services/tintu/utils/getErrorMessage.js";
 
 // "OFFER_ACCEPTED", "Offer Accepted", "offer-accepted" all count
-const isOfferAccepted = (stage) =>
-  String(stage || "").toUpperCase().replace(/[\s-]+/g, "_") === "OFFER_ACCEPTED";
+const isOfferAccepted = (stage) => {
+  const s = String(stage || "").toUpperCase().replace(/[\s-]+/g, "_");
+  return s === "OFFER" || s === "OFFER_ACCEPTED";
+};
 
 function Field({ label, children }) {
   return (

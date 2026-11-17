@@ -3,7 +3,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 export const createOrganization = async (payload) => {
   const token = localStorage.getItem("token");
 
-  const response = await fetch(`${API_URL}/api/organizations`,  {
+  const response = await fetch(`${API_URL}/api/v1/organizations`,  {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
