@@ -19,4 +19,11 @@ export const login = async (data) => {
   return res;
 };
 
+// POST /api/v1/auth/forgot-password   { email }
+// The backend replies 404 if the email is not a registered user. In local mode it
+// prints "RESET LINK" and "TOKEN" in the backend console instead of sending mail.
 export const forgotPassword = (data) => api.post("/auth/forgot-password", data);
+
+// POST /api/v1/auth/reset-password   { token, newPassword }
+// 200 { message } on success, 400 if the token is invalid or expired (15 minutes, one use)
+export const resetPassword = (data) => api.post("/auth/reset-password", data);
