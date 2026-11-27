@@ -70,6 +70,7 @@ export default function Sidebar() {
     { name: "Salary Structure", href: "/salary-structure", icon: Wallet },
     { name: "Payroll", href: "/payroll", icon: Banknote },
     { name: "Payroll Draft", href: "/payroll/draft", icon: Receipt },
+    { name: "My Payslips", href: "/payslips", icon: FileText },
     { name: "Reports", href: "/reports", icon: FileText },
     { name: "Organization", href: "/organization", icon: Building2 },
     { name: "Add User", href: "/users/new", icon: UserPlus },

@@ -1,4 +1,4 @@
 import MainLayout from "../../components/MainLayout.js";
-import PayrollDraftPage from "../../components/tintu/pages/PayrollDraftPage.jsx";
+import PayrollDraftPage from "../../components/features/pages/PayrollDraftPage.jsx";
 
 export default function Page() { return <MainLayout><PayrollDraftPage /></MainLayout>; }

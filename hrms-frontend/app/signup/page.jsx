@@ -1,3 +1,3 @@
-import SignupPage from "../components/tintu/pages/SignupPage.jsx";
+import SignupPage from "../components/features/pages/SignupPage.jsx";
 
 export default function Page() { return <SignupPage />; }

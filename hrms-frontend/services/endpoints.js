@@ -48,6 +48,20 @@ export const ENDPOINTS = {
   // S-15 Payroll Processing
   payrollProcess: (month) => `/api/v1/payroll/process/${month}`, // POST, month = YYYY-MM
 
+  // S-17 .. S-20 Payroll (ASSUMED URLs - confirm with Naresh / Varma)
+  payrollProcessStatus: (month) => `/api/v1/payroll/process/${month}/status`, // GET progress
+  payrollProcessErrors: (month) => `/api/v1/payroll/process/${month}/errors`, // GET failed employees
+  statutoryConfig: "/api/v1/payroll/statutory-config", // GET, PUT
+  ptSlabs: "/api/v1/payroll/professional-tax-slabs", // GET, POST
+  ptSlab: (id) => `/api/v1/payroll/professional-tax-slabs/${id}`, // PUT, DELETE
+
+  // N-18 / N-19 Payroll batches: DRAFT -> PROCESSING -> APPROVED -> LOCKED
+  payrollBatches: "/api/v1/payroll/batches", // GET all, POST { payrollMonth }
+  payrollBatch: (month) => `/api/v1/payroll/batches/${month}`, // GET summary of one month
+  payrollBatchStatus: (id) => `/api/v1/payroll/batches/${id}/status`, // PUT { status }
+  payrollBatchApprove: (id) => `/api/v1/payroll/batches/${id}/approve`, // PUT
+  payrollBatchLock: (id) => `/api/v1/payroll/batches/${id}/lock`, // PUT
+
   // Dashboard
   //employees: "/api/employees",
    employees: "/api/v1/employees",
